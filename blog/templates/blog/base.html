@@ -1,18 +1,31 @@
 {% load static %}
+{% load blog_tags %}
 <!DOCTYPE html>
 <html>
 <head>
 <title>{% block title %}{% endblock %}</title>
-<link href="{% static "css/blog.css" %}" rel="stylesheet">
+<link href="{% static 'css/blog.css' %}" rel="stylesheet">
 </head>
 <body>
+<sidebar id="sidebar">
+<h1>My Blog</h1>
+<p>This is my blog.
+Feel free to browse around!
+I've written {% total_posts %} posts. </p>
+{% get_latest_posts_inclusion_style %}
+{% get_most_commented_posts as most_commented_posts %}
+<h3>Most Commented Posts</h3>
+<ul>
+    {% for post in most_commented_posts %}
+    <li><a href="{{ post.get_absolute_url }}">{{ post.title }} ({{ post.total_comments }})</a></li>
+    {% endfor %}
+</ul>
+</sidebar>
 <div id="content">
     {% block content %}
     {% endblock %}
-  </div>
-<div id="sidebar">
-<h2>My blog</h2>
-<p>This is my blog.</p>
 </div>
+
+
 </body>
 </html>

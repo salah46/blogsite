@@ -65,9 +65,10 @@ def post_detail(request, year, month, day, post):
     # List of similar posts
     post_tags_ids = post.tag.values_list('id', flat=True)
 
-    similar_posts = Post.objects.filter(status=Post.Status.PUBLISHED,
-                                        tag__in=post_tags_ids
-                                        ).exclude(id=post.id)
+    similar_posts = Post.objects.filter(
+        status=Post.Status.PUBLISHED,
+        tag__in=post_tags_ids
+    ).exclude(id=post.id)
 
     similar_posts = similar_posts.annotate(
         same_tag=Count('tag')
