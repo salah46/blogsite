@@ -6,7 +6,8 @@ from django.views.generic import ListView
 from django.core.mail import send_mail
 from .forms import EmailPostForm, CommentForm
 from django.views.decorators.http import require_POST
-
+from taggit.models import Tag
+from django.db.models import Count
 # Create your views here.
 
 
@@ -17,9 +18,14 @@ class PostListView(ListView):
     template_name = 'blog/post/list.html'
 
 
-def post_list(request):
+def post_list(request, tag_slug=None):
     try:
         post_list = Post.objects.filter(status=Post.Status.PUBLISHED)
+
+        tag = None
+        if tag_slug:
+            tag = get_object_or_404(Tag, slug=tag_slug)
+            post_list = post_list.filter(tag__in=[tag])
 
         # Pagination with 3 posts per page
         paginator = Paginator(post_list, 1)
@@ -35,7 +41,11 @@ def post_list(request):
     return render(
         request,
         'blog/post/list.html',
-        {'posts': posts}
+        {
+            'posts': posts,
+            'tag': tag
+        }
+
     )
 
 
@@ -52,11 +62,24 @@ def post_detail(request, year, month, day, post):
     # Form for users to comment
     form = CommentForm()
 
+    # List of similar posts
+    post_tags_ids = post.tag.values_list('id', flat=True)
+
+    similar_posts = Post.objects.filter(status=Post.Status.PUBLISHED,
+                                        tag__in=post_tags_ids
+                                        ).exclude(id=post.id)
+
+    similar_posts = similar_posts.annotate(
+        same_tag=Count('tag')
+    ).order_by('-same_tag', '-publish')[:4]
+
     return render(request,
                   "blog/post/details.html",
                   {"post": post,
                    'comments': comments,
-                   'form': form})
+                   'form': form,
+                   'similar_posts': similar_posts
+                   })
 
 
 def post_share(request, post_id):
@@ -109,8 +132,8 @@ def post_share(request, post_id):
 def post_comment(request, post_id):
     post = get_object_or_404(Post, id=post_id,
                              status=Post.Status.PUBLISHED)
-    
-    comment =None
+
+    comment = None
 
     # A comment was posted
     form = CommentForm(data=request.POST)
